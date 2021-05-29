@@ -1,120 +1,162 @@
-#include<stdio.h>
-#define MAX 100
-// LIST
-typedef int Position;
-typedef int ElementType;
-typedef struct{
-	ElementType Elements[MAX];
-	Position last;	
-}List;
-int fullList(List L){ //Day tra ve 1
-	return L.last == MAX;
-}
-int isEmpty(List L){
-	return L.last == 0;
-}
-void make_null_list(List *L){
-	L->last = 0;
-}
-void append(ElementType x, List *L){
-	if(!fullList(*L)){
-		L->Elements[L->last++] = x;
-	}
-}
-// GRAPH
-typedef struct{
-	int n,m;
-	int A[MAX][MAX];
-}Graph;
-void init_graph(Graph *G, int n, int m){
-	int i,j;
+#include <stdio.h>
+#define INFINITY 9999
+#define MAXN 500
+#define NO_EDGE 0
+typedef struct {
+	int n; // Dinh
+	int m;
+	int L[MAXN][MAXN];
+} Graph;
+void init_graph(Graph* G, int n, int m) {
 	G->n = n;
 	G->m = m;
-	for(i=1; i<=G->n; i++){
-		for(j=1; j<=G->m; j++){
-			G->A[i][j] = 0;
-		}
+	int i, j;
+	for (i = 1; i <= n; i++) {
+		for (j = 1; j <= m; j++) {
+			G->L[i][j] = NO_EDGE;
+		}	
 	}
 }
-void add_edge(Graph* G, int e, int x, int y) {
-    G->A[x][e] = 1;
-    G->A[y][e] = -1;
-    //Co huong: G->A[y][e] = -1;
+// LIST
+#define MAX_ELEMENTS 100
+typedef int ElementType;
+typedef struct {
+	ElementType data[MAX_ELEMENTS];
+	int size;
+} List;
+void make_null(List* L) {
+	L->size = 0;
 }
-List neighbors(Graph *G, int x){
-	int i,j;
-	List L;
-	make_null_list(&L);
-	for(i=1; i<=G->n; i++){
-		for(j=1; j<=G->m; j++){
-			//Co huong: G->A[i][j] == -1
-			if(G->A[x][j] == 1 && G->A[i][j] == -1 && x != i) append(i, &L);
-		}
-	}
-	return L;
+void push_back(List* L, ElementType x) {
+	L->data[L->size] = x;
+	L->size++;
 }
-int adjacent(Graph *G, int u, int v){
+ElementType element_at(List* L, int i) {
+	return L->data[i-1];
+}
+int count_list(List* L) {
+	return L->size;
+}
+int adjeacent(Graph* G, int x, int y) {
 	int e;
-	for(e=1; e<=G->m; e++){
-		//Co huong:  G->A[v][e] == -1
-		if(G->A[u][e] == 1 && G->A[v][e] == 1) return 1;
-	}
+	for (e = 1; e <= G->m; e++)
+		if (G->L[x][e] == 1 && G->L[y][e] == 1)
+			return 1;
 	return 0;
 }
-int color[MAX];
-int fail;
-void colorize(Graph *G, int x, int c){
-	if(color[x] == -1){
-		color[x] = c;
-		List L = neighbors(G, x);
-		int j;
-		for(j=0; j<L.last; j++){
-			int y = L.Elements[j];
-			colorize(G, y, !c);
-		}
-	}else
-		if(color[x] != c)
-			fail = 1;
+int degree(Graph* G, int x) {
+	int e, deg = 0;
+	for (e = 1; e <= G->m; e++)
+		if (G->L[x][e] == 1)
+			deg++;
+	return deg;
 }
-int is_bigraph(Graph *G){
+void print_list(List L) {
+	int i;
+	for (i = 1; i <= L.size; i++) {
+		printf("%d ", element_at(&L, i));
+	}
+}
+List neighbors(Graph* G, int x) {
+	List ansList;
+	make_null(&ansList);
+	int col, row, temp;
+	for(col = 1; col <= G->m; col++) {
+		if(G->L[x][col] == 1) {
+			for(row = 1; row <= G->n; row++) {
+				if(G->L[row][col] == 1 && row != x) {
+					push_back(&ansList, row);
+				}
+			}
+		}
+	}
+	int i, j;
+	for(i = 1; i <= count_list(&ansList); i++) {
+		for(j = i+1; j <= count_list(&ansList)-1; j++) {
+			if(element_at(&ansList, i) > element_at(&ansList, j)) {
+				temp = ansList.data[i-1];
+				ansList.data[i-1] = ansList.data[j-1];
+				ansList.data[j-1] = temp;
+			}
+		}
+	}
+	List checkList;
+	make_null(&checkList);
+	int check = 1;
+	for(i = 1; i <= count_list(&ansList); i++) {
+		for(j = 1; j <= count_list(&checkList); j++) {
+			if(element_at(&ansList, i) == element_at(&checkList, j)) {
+				check = 0;
+		}
+	}
+		if(check) {
+			push_back(&checkList, element_at(&ansList, i));
+		}
+	}
+	return checkList;
+}
+void add_edge(Graph* G, int e, int x, int y) {
+	G->L[x][e] = 1;
+	G->L[y][e] = 1;
+}
+#define MAX_VERTICES 1000
+int color[MAX_VERTICES];
+int fail;
+// To mau dinh bang phuong phap de quy
+void colorize(Graph* G, int x, int c) {
+// Neu dinh x da chua co mau => to no
+	if (color[x] == -1) {
+	color[x] = c;
+	List list = neighbors(G, x);
 	int j;
-	for(j=1; j<=G->n; j++)
+	for (j = 1; j <= list.size; j++) {
+		int y = element_at(&list, j);
+		colorize(G, y, !c);
+		}
+	} else {
+		if (color[x] != c) // 1 dinh bi to 2 mau khac nhau
+		fail = 1;
+	}
+}
+int is_bigraph(Graph* G) {
+	// Khoi tao color, chua dinh nao co mau
+	int j;
+	for (j = 1; j <= G->n; j++) {
 		color[j] = -1;
-	colorize(G, 1, 0);
+	}
+	fail = 0;
+	colorize(G, 1, 0); // To mau dinh 1 bang mau den
 	return !fail;
 }
-int main(){
-	freopen("dt.txt", "r", stdin);
-	int n,m;
-	scanf("%d%d",&n,&m);
+int main() {
+	// Kiem tra ton tai chu trinh doi voi do thi vo huong
 	Graph G;
-	init_graph(&G,n,m);
-	int i,j,u,v,w;
-	for(j=1; j<=m; j++){
-		scanf("%d%d",&u, &v);
-		add_edge(&G,j,u,v);
+	int e, j, u, v, w, n, m;
+	freopen("dt.txt","r",stdin);
+	scanf("%d%d", &n, &m);
+	init_graph(&G, n, m);
+	for (e = 1; e <= m; e++) {
+	scanf("%d%d", &u, &v);
+	add_edge(&G, e, u, v);
 	}
-
-	
-	int A = 0, B = 0;
+	int A = 0;
+	int B = 0;
 	if (is_bigraph(&G)) {
 		int i;
 		for (i = 1; i <= G.n; i++) {
-			if (color[i] == 0) {
+			if (!color[i]) {
 				A++;
-				printf("%d ", i);
-			}
+//				printf("%d ", i);
+	}
 		}
-		printf("\n");
+//		printf("\n");
 		for (i = 1; i <= G.n; i++) {
 			if (color[i]) {
 				B++;
-				printf("%d ", i);
+//				printf("%d ", i);
 			}
 		}
-	//	printf("%d %d", B, A);
-	}
-	else
+		printf("%d %d", A, B);
+	}else
 	printf("-1 -1");
-return 0;
-}
+return 0;}
